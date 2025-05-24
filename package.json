@@ -1,0 +1,62 @@
+{
+  "name": "web",
+  "version": "1.0.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "description": "",
+  "scripts": {
+    "prettier": "prettier --write .",
+    "prettier:check": "prettier --check .",
+    "build": "tsx scripts/build.ts build/browser",
+    "lint": "eslint --fix .",
+    "lint:check": "eslint .",
+    "serve": "tsx scripts/serve.ts",
+    "run": "tsx src/node/index.ts",
+    "run:emulator": "firebase emulators:exec --only firestore --project my-test-project 'npm run run -- -e -p my-test-project'",
+    "tsc": "tsc -b"
+  },
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "bootstrap": "^5.3.6",
+    "death": "^1.1.0",
+    "esbuild": "^0.25.3",
+    "firebase": "^11.5.0",
+    "firebase-tools": "^13.35.1",
+    "ts-closure-library": "^2022.502.5",
+    "tsx": "^4.19.4",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.23.0",
+    "@tsconfig/node20": "^20.1.5",
+    "@types/death": "^1.1.5",
+    "@types/execa": "^0.9.0",
+    "@types/express": "^5.0.1",
+    "@types/fs-extra": "^11.0.4",
+    "@types/glob": "^8.1.0",
+    "@types/mime-types": "^2.1.4",
+    "@types/node": "^20.17.28",
+    "@types/nunjucks": "^3.2.6",
+    "@types/signale": "^1.4.7",
+    "@types/statuses": "^2.0.5",
+    "@types/yargs": "^17.0.33",
+    "dedent": "^1.6.0",
+    "eslint": "^9.23.0",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "execa": "^9.5.2",
+    "express": "^5.1.0",
+    "fs-extra": "^11.3.0",
+    "glob": "^11.0.2",
+    "mime-types": "^3.0.1",
+    "nunjucks": "^3.2.4",
+    "prettier": "^3.5.3",
+    "signale": "^1.4.0",
+    "statuses": "^2.0.1",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.28.0"
+  }
+}

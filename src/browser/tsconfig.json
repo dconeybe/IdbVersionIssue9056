@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base",
+  "compilerOptions": {
+    "lib": ["es2023", "dom", "dom.iterable"]
+  },
+
+  "references": [{ "path": ".." }],
+
+  "include": ["**/*"]
+}

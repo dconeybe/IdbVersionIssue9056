@@ -1,0 +1,6 @@
+/.idea/
+/build/
+/node_modules/
+firestore-debug.log
+.firebaserc
+.firebase/

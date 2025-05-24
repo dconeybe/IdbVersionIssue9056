@@ -1,0 +1,16 @@
+{
+  "jwf74n94b6-comments": [
+    "This section will be ignored by esbuild and I'm just using it to add",
+    "comments to this file, since pure json does not provide a mechanism for this.",
+    "Note that esbuild only recognizes a small subset of tsconfig.json properties",
+    "as documented at https://esbuild.github.io/api/#tsconfig."
+  ],
+  "compilerOptions": {
+    "alwaysStrict": true,
+    "experimentalDecorators": false,
+    "isolatedModules": true,
+    "strict": true,
+    "useDefineForClassFields": true,
+    "verbatimModuleSyntax": true
+  }
+}

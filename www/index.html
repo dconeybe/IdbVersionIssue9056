@@ -1,0 +1,238 @@
+<!--
+Copyright 2022 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="firebase_favicon.png" />
+    <link href="bootstrap.css" rel="stylesheet" />
+    <script src="bootstrap.js" defer></script>
+  </head>
+
+  <body>
+    <!-- The main content of this web page. -->
+    <div id="divMain" class="container-fluid mt-3" hidden>
+      <div class="row">
+        <div class="col-sm-2 pe-3">
+          <button id="btnRunTest" class="btn btn-primary mb-2">Run Test</button>
+          <br />
+          <button id="btnCancelTest" class="btn btn-secondary mb-2" disabled>
+            Cancel Test
+          </button>
+          <br />
+          <button id="btnSettings" class="btn btn-secondary mb-2">
+            Settings
+          </button>
+        </div>
+        <div class="col-lg-10">
+          <button id="btnClearLogs" class="btn btn-secondary mb-2" hidden>
+            Clear Logs
+          </button>
+          <button id="btnCopyLogs" class="btn btn-secondary mb-2" hidden>
+            Copy Logs
+          </button>
+
+          <!--
+            The single row of this table is used as a template to create
+            table rows to append to the log lines table.
+          -->
+          <table hidden>
+            <tr id="logLineTemplate" class="mb-2">
+              <td class="lh-1 align-text-top">
+                <span
+                  id="logLineTimestamp"
+                  class="font-monospace me-2"
+                  style="font-size: 12px"
+                ></span>
+              </td>
+              <td class="lh-1 align-text-top">
+                <span
+                  id="logLineMessage"
+                  class="font-monospace"
+                  style="font-size: 12px"
+                ></span>
+              </td>
+            </tr>
+          </table>
+
+          <!-- The table to which log lines will be appended. -->
+          <table class="table-borderless">
+            <tbody id="logLines"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- The "div" that is revealed when the "Settings" button is clicked. -->
+    <div id="divSettings" class="container-fluid mt-3" hidden>
+      <div class="row">
+        <div class="col-sm-3 pe-3">
+          <h1>Settings</h1>
+
+          <button id="btnSettingsSave" class="btn btn-primary mb-2">
+            Save
+          </button>
+          <br />
+          <button id="btnSettingsCancel" class="btn btn-secondary mb-2">
+            Cancel
+          </button>
+        </div>
+
+        <div class="col-lg-9">
+          <h3>Debug Logging</h3>
+          <p>
+            <input id="chkDebugLogging" type="checkbox" />
+            <label for="chkDebugLogging">Firestore Debug Logging Enabled</label>
+          </p>
+
+          <h3>Firestore Host</h3>
+
+          <table class="table table-hover">
+            <tr
+              onclick="document.getElementById('radFirestoreHostProd').checked = true;"
+            >
+              <td>
+                <input
+                  name="FirestoreHost"
+                  id="radFirestoreHostProd"
+                  type="radio"
+                />
+                <label for="radFirestoreHostProd">
+                  <span data-dynamic-replace="HOST_LABEL_PROD">Production</span>
+                </label>
+              </td>
+              <td>
+                <span data-dynamic-replace="HOST_NAME_PROD"></span>
+              </td>
+            </tr>
+            <tr
+              onclick="document.getElementById('radFirestoreHostEmulator').checked = true;"
+            >
+              <td>
+                <input
+                  name="FirestoreHost"
+                  id="radFirestoreHostEmulator"
+                  type="radio"
+                />
+                <label for="radFirestoreHostEmulator">
+                  <span data-dynamic-replace="HOST_LABEL_EMULATOR"
+                    >Emulator</span
+                  >
+                </label>
+              </td>
+              <td>
+                <span data-dynamic-replace="HOST_NAME_EMULATOR"></span>
+              </td>
+            </tr>
+            <tr
+              onclick="document.getElementById('radFirestoreHostNightly').checked = true;"
+            >
+              <td>
+                <input
+                  name="FirestoreHost"
+                  id="radFirestoreHostNightly"
+                  type="radio"
+                />
+                <label for="radFirestoreHostNightly">
+                  <span data-dynamic-replace="HOST_LABEL_NIGHTLY">Nightly</span>
+                </label>
+              </td>
+              <td>
+                <span data-dynamic-replace="HOST_NAME_NIGHTLY"></span>
+              </td>
+            </tr>
+            <tr
+              onclick="document.getElementById('radFirestoreHostQA').checked = true;"
+            >
+              <td>
+                <input
+                  name="FirestoreHost"
+                  id="radFirestoreHostQA"
+                  type="radio"
+                />
+                <label for="radFirestoreHostQA">
+                  <span data-dynamic-replace="HOST_LABEL_QA">QA</span>
+                </label>
+              </td>
+              <td>
+                <span data-dynamic-replace="HOST_NAME_QA"></span>
+              </td>
+            </tr>
+          </table>
+
+          <h3>Advanced Settings</h3>
+          <table>
+            <tr>
+              <td><label for="txtProjectId">Project ID:</label></td>
+              <td><input id="txtProjectId" type="text" /></td>
+            </tr>
+            <tr>
+              <td><label for="txtApiKey">API Key:</label></td>
+              <td><input id="txtApiKey" type="text" /></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="alert alert-danger" role="alert" id="divScriptLoadError" hidden>
+      <strong>
+        ERROR: Loading JavaScript module failed:
+        <span id="spanJavascriptModuleSrc"></span>
+      </strong>
+      <pre><span id="spanJavascriptModuleError"></span></pre>
+      Check the JavaScript console logs for details.
+      <br />
+      If you opened index.html directly then this won't work because loading
+      JavaScript modules via file:/// URLs causes a CORS error.
+      <br />
+      Also, the site needs to be <em>built</em> before use.
+      <br />
+      To fix this, build the website then serve it, such as by running:
+      <br />
+      <code>npm run build &amp;&amp; npm run serve</code>
+      <br />
+      and browse to the URL that it prints.
+    </div>
+
+    <!-- Load the bundled JavaScript, showing an error if loading fails. -->
+    <script type="module">
+      const moduleName = './index.js';
+      const moduleUrl = import.meta.resolve(moduleName);
+
+      function showImportError(error) {
+        document.getElementById('spanJavascriptModuleSrc').innerText =
+          moduleUrl;
+        document.getElementById('spanJavascriptModuleError').innerText =
+          error.stack?.trim();
+        document.getElementById('divScriptLoadError').hidden = false;
+      }
+
+      function onModuleLoadError(error) {
+        console.error(
+          `Loading JavaScript module "${moduleUrl}" FAILED:`,
+          error
+        );
+        showImportError(error);
+      }
+
+      import(moduleName)
+        .then(module => module.initialize())
+        .catch(onModuleLoadError);
+    </script>
+  </body>
+</html>
