@@ -16,114 +16,145 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import {
-  collection,
-  CollectionReference,
-  deleteDoc,
-  disableNetwork,
-  doc,
-  DocumentReference,
-  DocumentSnapshot,
-  enableIndexedDbPersistence,
-  enableNetwork,
-  Firestore,
-  getDoc,
-  getDocs,
-  onSnapshot,
-  Query,
-  query,
-  QuerySnapshot,
-  runTransaction,
-  setDoc,
-  where,
-  writeBatch
-} from 'firebase/firestore';
-
 import { log } from './common/logging.js';
-import { Random } from './common/random.js';
-import { TestEnvironment } from './common/test_environment.js';
-import {
-  createDocument,
-  createDocuments,
-  createEmptyCollection,
-  Deferred,
-  generateValue,
-  SnapshotListener
-} from './common/util.js';
+import { generateValue } from './common/util.js';
 
-/**
- * Runs the test.
- *
- * Replace the body of this function with the code you would like to execute
- * when the user clicks the "Run Test" button in the UI.
- *
- * @param db the `Firestore` instance to use.
- * @param env extra information about the given Firestore instance and some
- * helper methods.
- */
-export async function runTheTest(
-  db: Firestore,
-  env: TestEnvironment
-): Promise<void> {
-  // Create a test document.
-  const collectionRef = createEmptyCollection(db, 'web-demo-');
-  const documentRef = await createDocument(collectionRef, 'TestDoc', {
-    foo: generateValue()
+// The version to specify to indexedDB.open().
+const IDB_VERSION = 66;
+
+export async function runTheTest(abortPromise: Promise<void>): Promise<void> {
+  const idb = await openDb(IDB_VERSION);
+  await abortPromise;
+  await idb.close();
+}
+
+function openDb(version: number): Promise<IndexedDbWrapper> {
+  const id = `idbw${generateValue()}`;
+
+  return new Promise((resolve, reject) => {
+    log(`sxhy49e7qb openDbRequest[${id}] started with version=${version}`);
+    const openDbRequest = window.indexedDB.open('f6b48yt8wc', version);
+
+    openDbRequest.addEventListener('error', event => {
+      const openDbRequest = idbOpenDBRequestFromEvent(event);
+      const error = openDbRequest.error!;
+      log(
+        `k74vkcrnnr openDbRequest[${id}] error: ${error.name}: ${error.message}`
+      );
+      reject(error);
+    });
+
+    openDbRequest.addEventListener('success', event => {
+      const openDbRequest = idbOpenDBRequestFromEvent(event);
+      const db = openDbRequest.result;
+      log(`ynpdpnrz6y openDbRequest[${id}] success: db.name=${db.name}`);
+      resolve(new IndexedDbWrapper(id, db));
+    });
+
+    openDbRequest.addEventListener('blocked', event => {
+      const data = blockedDataFromIDBVersionChangeEvent(event);
+      log(`kyr8jcsk7q openDbRequest[${id}] blocked: ${JSON.stringify(data)}`);
+    });
+
+    openDbRequest.addEventListener('upgradeneeded', event => {
+      const data = upgradeNeededDataFromIDBVersionChangeEvent(event);
+      log(
+        `qj3shx3hth openDbRequest[${id}] upgradeneeded: ${JSON.stringify(data)}`
+      );
+      const openDbRequest = idbOpenDBRequestFromEvent(event);
+      const db = openDbRequest.result;
+      db.createObjectStore(`ost6hhg47t_${db.version}`);
+    });
   });
-  env.cancellationToken.throwIfCancelled();
+}
 
-  // Register a snapshot listener for the test document.
-  log(`onSnapshot(${documentRef.path})`);
-  const snapshotListener = new SnapshotListener<DocumentSnapshot>(
-    env.cancellationToken
-  );
-  const unsubscribe = onSnapshot(
-    documentRef,
-    { includeMetadataChanges: true },
-    snapshotListener.observer
-  );
-  env.cancellationToken.onCancelled(unsubscribe);
+function upgradeNeededDataFromIDBVersionChangeEvent(
+  event: IDBVersionChangeEvent
+) {
+  const baseData = blockedDataFromIDBVersionChangeEvent(event);
+  const openDbRequest = idbOpenDBRequestFromEvent(event);
+  const db = openDbRequest.result;
+  return { ...baseData, 'db.version': db.version };
+}
 
-  // Wait for a snapshot of the test document from the server.
-  {
-    const waitOptions = {
-      fromCache: false,
-      hasPendingWrites: false
-    };
-    log(`waitForSnapshot(${JSON.stringify(waitOptions)})`);
-    const snapshot = await snapshotListener.waitForSnapshot(waitOptions);
-    log(`Got document ${snapshot.id}: ${JSON.stringify(snapshot.data())}`);
-    env.cancellationToken.throwIfCancelled();
+function blockedDataFromIDBVersionChangeEvent(event: IDBVersionChangeEvent) {
+  const { oldVersion, newVersion } = event;
+  return { oldVersion, newVersion };
+}
+
+class IndexedDbWrapper {
+  #id: string;
+  #state: IndexedDbWrapperState;
+
+  constructor(id: string, db: IDBDatabase) {
+    this.#id = id;
+    this.#state = new IndexedDbWrapperOpenedState(db);
+
+    db.addEventListener('error', event => {
+      log(`dyqggzenem IDBDatabase[${id}] error: ${JSON.stringify(event)}`);
+    });
+    db.addEventListener('close', event => {
+      log(`acagpcy87g IDBDatabase[${id}] close: ${JSON.stringify(event)}`);
+    });
+    db.addEventListener('abort', event => {
+      log(`kf999sz8h7 IDBDatabase[${id}] abort: ${JSON.stringify(event)}`);
+    });
+    db.addEventListener('versionchange', event => {
+      const { oldVersion, newVersion } = event;
+      const data = { oldVersion, newVersion };
+      log(
+        `nwdzxfa2n3 IDBDatabase[${id}] versionchange: ${JSON.stringify(data)}`
+      );
+    });
   }
 
-  // Modify the test document
-  {
-    const dataToSet = { bar: generateValue() };
-    log(`setDoc(${documentRef.id}, ${JSON.stringify(dataToSet)})`);
-    await setDoc(documentRef, dataToSet);
-    env.cancellationToken.throwIfCancelled();
-  }
+  async close(): Promise<void> {
+    if (this.#state.name === 'closed') {
+      return;
+    }
+    const id = this.#id;
+    const db = this.#state.db;
+    const initialDbVersion = this.#state.initialDbVersion;
 
-  // Wait for a snapshot of the test document with the pending writes.
-  {
-    const waitOptions = {
-      hasPendingWrites: true
-    };
-    log(`waitForSnapshot(${JSON.stringify(waitOptions)})`);
-    const snapshot = await snapshotListener.waitForSnapshot(waitOptions);
-    log(`Got document ${snapshot.id}: ${JSON.stringify(snapshot.data())}`);
-    env.cancellationToken.throwIfCancelled();
-  }
+    log(`wesbcqqzre IDBDatabase[${id}] close() starting`);
 
-  // Wait for a snapshot of the test document from the server.
-  {
-    const waitOptions = {
-      fromCache: false,
-      hasPendingWrites: false
-    };
-    log(`waitForSnapshot(${JSON.stringify(waitOptions)})`);
-    const snapshot = await snapshotListener.waitForSnapshot(waitOptions);
-    log(`Got document ${snapshot.id}: ${JSON.stringify(snapshot.data())}`);
-    env.cancellationToken.throwIfCancelled();
+    await new Promise<void>(resolve => {
+      const transaction = db.transaction(`ost6hhg47t_${initialDbVersion}`);
+      transaction.addEventListener('abort', () => {
+        log(`x6n2sjwrx3 IDBDatabase[${id}] close transaction abort`);
+        resolve();
+      });
+      transaction.addEventListener('complete', () => {
+        resolve();
+      });
+      transaction.addEventListener('error', () => {
+        resolve();
+      });
+      db.close();
+    });
+
+    this.#state = new IndexedDbWrapperClosedState();
+
+    log(`kz39y88qdq IDBDatabase[${id}] close() finished`);
   }
+}
+
+class IndexedDbWrapperOpenedState {
+  readonly name = 'opened' as const;
+  readonly initialDbVersion: number;
+  constructor(readonly db: IDBDatabase) {
+    this.initialDbVersion = db.version;
+  }
+}
+
+class IndexedDbWrapperClosedState {
+  readonly name = 'closed' as const;
+}
+
+type IndexedDbWrapperState =
+  | IndexedDbWrapperOpenedState
+  | IndexedDbWrapperClosedState;
+
+function idbOpenDBRequestFromEvent(event: Event): IDBOpenDBRequest {
+  return event.target as IDBOpenDBRequest;
 }

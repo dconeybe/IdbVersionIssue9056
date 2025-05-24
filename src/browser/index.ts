@@ -73,29 +73,20 @@ function loadSettings(): Settings {
  * Sets up the `Firestore` instance and invoke the `runTheTest()` function from
  * `run_the_test.ts`.
  */
-async function go(
-  ui: MainUi,
-  cancellationToken: CancellationToken
-): Promise<void> {
+async function go(ui: MainUi, abortSignal: AbortSignal): Promise<void> {
   const startTime: DOMHighResTimeStamp = performance.now();
 
   log(`Test Starting at ${new Date()}`);
   try {
     ui.setRunTestButtonEnabled(false);
     ui.setCancelTestButtonEnabled(true);
-
-    const settings = loadSettings();
-    const dbInfo = getFirestore(settings);
-    const env: TestEnvironment = {
-      ...dbInfo,
-      cancellationToken,
-      runtime: 'browser',
-      getFirestore(instanceId: number): Firestore {
-        return getFirestore(settings, instanceId).db;
-      }
-    };
-
-    await runTheTest(env.db, env);
+    const abortPromise = new Promise<void>(resolve => {
+      abortSignal.addEventListener('abort', () => resolve(), {
+        passive: true,
+        once: true
+      });
+    });
+    await runTheTest(abortPromise);
   } catch (e) {
     if (e instanceof Error) {
       log(`ERROR: ${e.message}`, { alsoLogToConsole: false });
@@ -112,22 +103,21 @@ async function go(
 }
 
 class MainUiCallbacksImpl implements MainUiCallbacks {
-  private cancellationTokenSource: CancellationTokenSource | null = null;
+  private abortController: AbortController | null = null;
 
   constructor(private readonly ui: MainUi) {}
 
   cancelTest(): void {
     log('Test cancellation requested');
-    this.cancellationTokenSource?.cancel();
+    this.abortController?.abort('cancel button clicked');
   }
 
   runTest(): void {
-    if (this.cancellationTokenSource) {
-      this.cancellationTokenSource.cancel();
-    }
-    this.cancellationTokenSource = new CancellationTokenSource();
-
-    go(this.ui, this.cancellationTokenSource.cancellationToken);
+    this.abortController?.abort(
+      'run test button click cancelled the current test'
+    );
+    this.abortController = new AbortController();
+    go(this.ui, this.abortController.signal);
   }
 
   showSettings(): void {
