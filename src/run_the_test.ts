@@ -29,7 +29,7 @@ export async function runTheTest(abortPromise: Promise<void>): Promise<void> {
 }
 
 function openDb(version: number): Promise<IndexedDbWrapper> {
-  const id = `idbw${generateValue()}`;
+  const id = `idbw${Math.round(Math.random() * Number.MAX_SAFE_INTEGER).toString(36)}`;
 
   return new Promise((resolve, reject) => {
     log(`sxhy49e7qb openDbRequest[${id}] started with version=${version}`);
